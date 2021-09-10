@@ -80,14 +80,6 @@ class ExecutableOptions {
 
     parser
       ..addSeparator(_separator('Other'))
-      ..addFlag('watch',
-          abbr: 'w',
-          help: 'Watch stylesheets and recompile when they change.',
-          negatable: false)
-      ..addFlag('poll',
-          help: 'Manually check for changes rather than using a native '
-              'watcher.\n'
-              'Only valid with --watch.')
       ..addFlag('stop-on-error',
           help: "Don't compile more files once an error is encountered.")
       ..addFlag('interactive',
@@ -142,7 +134,7 @@ class ExecutableOptions {
 
     var invalidOptions = [
       'stdin', 'indented', 'style', 'source-map', 'source-map-urls', //
-      'embed-sources', 'embed-source-map', 'update', 'watch'
+      'embed-sources', 'embed-source-map', 'update'
     ];
     for (var option in invalidOptions) {
       if (_options.wasParsed(option)) {
@@ -200,12 +192,6 @@ class ExecutableOptions {
 
   /// Whether to update only files that have changed since the last compilation.
   bool get update => _options['update'] as bool;
-
-  /// Whether to continuously watch the filesystem for changes.
-  bool get watch => _options['watch'] as bool;
-
-  /// Whether to manually poll for changes when watching.
-  bool get poll => _options['poll'] as bool;
 
   /// Whether to stop compiling additional files once one file produces an
   /// error.
@@ -277,8 +263,6 @@ class ExecutableOptions {
           _fail("Only one argument is allowed with --stdin.");
         } else if (update) {
           _fail("--update is not allowed with --stdin.");
-        } else if (watch) {
-          _fail("--watch is not allowed with --stdin.");
         }
         _sourcesToDestinations = Map.unmodifiable(
             {null: _options.rest.isEmpty ? null : _options.rest.first});
@@ -305,8 +289,6 @@ class ExecutableOptions {
         if (destination == null) {
           if (update) {
             _fail("--update is not allowed when printing to stdout.");
-          } else if (watch) {
-            _fail("--watch is not allowed when printing to stdout.");
           }
         }
 
@@ -464,11 +446,7 @@ class ExecutableOptions {
     }
   }
 
-  ExecutableOptions._(this._options) {
-    if (_options.wasParsed('poll') && !watch) {
-      _fail("--poll may not be passed without --watch.");
-    }
-  }
+  ExecutableOptions._(this._options);
 
   /// Makes [url] absolute or relative (to the directory containing
   /// [destination]) according to the `source-map-urls` option.

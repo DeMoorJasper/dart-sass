@@ -40,32 +40,6 @@ void main() {
       // newline normalization issues.
       testOn: "!windows");
 
-  for (var package in [
-    ".",
-    ...Directory("pkg").listSync().map((entry) => entry.path)
-  ]) {
-    group("in ${p.relative(package)}", () {
-      test("pubspec version matches CHANGELOG version", () {
-        var firstLine = const LineSplitter()
-            .convert(File("$package/CHANGELOG.md").readAsStringSync())
-            .first;
-        expect(firstLine, startsWith("## "));
-        var changelogVersion = Version.parse(firstLine.substring(3));
-
-        var pubspec = Pubspec.parse(
-            File("$package/pubspec.yaml").readAsStringSync(),
-            sourceUrl: p.toUri("$package/pubspec.yaml"));
-        expect(
-            pubspec.version!.toString(),
-            anyOf(
-                equals(changelogVersion.toString()),
-                changelogVersion.isPreRelease
-                    ? equals("${changelogVersion.nextPatch}-dev")
-                    : equals("$changelogVersion-dev")));
-      });
-    });
-  }
-
   for (var package in Directory("pkg").listSync().map((entry) => entry.path)) {
     group("in pkg/${p.basename(package)}", () {
       late Pubspec sassPubspec;

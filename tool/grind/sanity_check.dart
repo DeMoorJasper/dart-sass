@@ -21,10 +21,4 @@ void sanityCheckBeforeRelease() {
   if (listEquals(pkg.version.preRelease, ["dev"])) {
     fail("${pkg.version} is a dev release.");
   }
-
-  var versionHeader =
-      RegExp("^## ${RegExp.escape(pkg.version.toString())}\$", multiLine: true);
-  if (!File("CHANGELOG.md").readAsStringSync().contains(versionHeader)) {
-    fail("There's no CHANGELOG entry for ${pkg.version}.");
-  }
 }

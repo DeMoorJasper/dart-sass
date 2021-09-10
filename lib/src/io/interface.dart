@@ -2,8 +2,6 @@
 // MIT-style license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT.
 
-import 'package:watcher/watcher.dart';
-
 /// An output sink that writes to this process's standard error.
 class Stderr {
   /// Writes the string representation of [object] to standard error.
@@ -93,14 +91,3 @@ String? getEnvironmentVariable(String name) => throw '';
 /// Gets and sets the exit code that the process will use when it exits.
 int get exitCode => throw '';
 set exitCode(int value) => throw '';
-
-/// Recursively watches the directory at [path] for modifications.
-///
-/// Returns a future that completes with a single-subscription stream once the
-/// directory has been scanned initially. The watch is canceled when the stream
-/// is closed.
-///
-/// If [poll] is `true`, this manually checks the filesystem for changes
-/// periodically rather than using a native filesystem monitoring API.
-Future<Stream<WatchEvent>> watchDir(String path, {bool poll = false}) =>
-    throw '';

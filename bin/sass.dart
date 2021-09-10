@@ -12,7 +12,6 @@ import 'package:sass/src/exception.dart';
 import 'package:sass/src/executable/compile_stylesheet.dart';
 import 'package:sass/src/executable/options.dart';
 import 'package:sass/src/executable/repl.dart';
-import 'package:sass/src/executable/watch.dart';
 import 'package:sass/src/import_cache.dart';
 import 'package:sass/src/io.dart';
 import 'package:sass/src/stylesheet_graph.dart';
@@ -53,10 +52,6 @@ Future<void> main(List<String> args) async {
 
     var graph = StylesheetGraph(
         ImportCache(loadPaths: options.loadPaths, logger: options.logger));
-    if (options.watch) {
-      await watch(options, graph);
-      return;
-    }
 
     for (var source in options.sourcesToDestinations.keys) {
       var destination = options.sourcesToDestinations[source];

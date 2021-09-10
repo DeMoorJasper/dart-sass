@@ -9,7 +9,6 @@ import 'dart:io' as io;
 import 'package:async/async.dart';
 import 'package:path/path.dart' as p;
 import 'package:source_span/source_span.dart';
-import 'package:watcher/watcher.dart';
 
 import '../exception.dart';
 
@@ -86,16 +85,3 @@ DateTime modificationTime(String path) {
 }
 
 String? getEnvironmentVariable(String name) => io.Platform.environment[name];
-
-Future<Stream<WatchEvent>> watchDir(String path, {bool poll = false}) async {
-  var watcher = poll ? PollingDirectoryWatcher(path) : DirectoryWatcher(path);
-
-  // Wrap [stream] in a [SubscriptionStream] so that its `onListen` event
-  // triggers but the caller can still listen at their leisure.
-  var stream = SubscriptionStream<WatchEvent>(watcher.events
-      .transform(const SingleSubscriptionTransformer<WatchEvent, WatchEvent>())
-      .listen(null));
-  await watcher.ready;
-
-  return stream;
-}

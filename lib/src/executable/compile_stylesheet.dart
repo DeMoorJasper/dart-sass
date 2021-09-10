@@ -125,12 +125,12 @@ Future<void> compileStylesheet(ExecutableOptions options, StylesheetGraph graph,
     writeFile(destination, css + "\n");
   }
 
-  if (options.quiet || (!options.update && !options.watch)) return;
+  if (options.quiet || !options.update) return;
   var buffer = StringBuffer();
   if (options.color) buffer.write('\u001b[32m');
 
   var sourceName = source == null ? 'stdin' : p.prettyUri(p.toUri(source));
-  // `destination` is guaranteed to be non-null in update and watch mode.
+  // `destination` is guaranteed to be non-null in update.
   var destinationName = p.prettyUri(p.toUri(destination!));
   buffer.write('Compiled $sourceName to $destinationName.');
   if (options.color) buffer.write('\u001b[0m');

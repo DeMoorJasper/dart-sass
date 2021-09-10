@@ -12,10 +12,8 @@ import 'package:node_interop/node_interop.dart';
 import 'package:node_interop/stream.dart';
 import 'package:path/path.dart' as p;
 import 'package:source_span/source_span.dart';
-import 'package:watcher/watcher.dart';
 
 import '../exception.dart';
-import '../node/chokidar.dart';
 
 class FileSystemException {
   final String message;
@@ -212,38 +210,3 @@ String get currentPath => process.cwd();
 int get exitCode => process.exitCode;
 
 set exitCode(int code) => process.exitCode = code;
-
-Future<Stream<WatchEvent>> watchDir(String path, {bool poll = false}) {
-  var watcher = chokidar.watch(
-      path, ChokidarOptions(disableGlobbing: true, usePolling: poll));
-
-  // Don't assign the controller until after the ready event fires. Otherwise,
-  // Chokidar will give us a bunch of add events for files that already exist.
-  StreamController<WatchEvent>? controller;
-  watcher
-    ..on(
-        'add',
-        allowInterop((String path, [void _]) =>
-            controller?.add(WatchEvent(ChangeType.ADD, path))))
-    ..on(
-        'change',
-        allowInterop((String path, [void _]) =>
-            controller?.add(WatchEvent(ChangeType.MODIFY, path))))
-    ..on(
-        'unlink',
-        allowInterop((String path) =>
-            controller?.add(WatchEvent(ChangeType.REMOVE, path))))
-    ..on('error', allowInterop((Object error) => controller?.addError(error)));
-
-  var completer = Completer<Stream<WatchEvent>>();
-  watcher.on('ready', allowInterop(() {
-    // dart-lang/sdk#45348
-    var stream = (controller = StreamController<WatchEvent>(onCancel: () {
-      watcher.close();
-    }))
-        .stream;
-    completer.complete(stream);
-  }));
-
-  return completer.future;
-}
