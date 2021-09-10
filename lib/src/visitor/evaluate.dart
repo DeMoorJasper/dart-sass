@@ -1621,7 +1621,9 @@ class _EvaluateVisitor
     var url = result.item2;
 
     return _LoadedStylesheet(
-        Stylesheet.parse(contents,
+        Stylesheet.parse(
+            contents,
+            // TODO: Change this line if we want full syntax control in the node importer...
             url.startsWith('file') ? Syntax.forPath(url) : Syntax.scss,
             url: url,
             logger: _quietDeps && isDependency ? Logger.quiet : _logger),
