@@ -49,18 +49,7 @@ jobs:
       matrix:
         os: [ubuntu-latest]
         dart_channel: [stable]
-        node_version: [14]
-        include:
-          # Include LTS versions on Ubuntu
-          - os: ubuntu-latest
-            dart_channel: stable
-            node_version: 12
-          - os: ubuntu-latest
-            dart_channel: stable
-            node_version: 10
-          - os: ubuntu-latest
-            dart_channel: dev
-            node_version: 14
+        node_version: [12]
 
     steps:
       - uses: actions/checkout@v2
