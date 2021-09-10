@@ -14,46 +14,6 @@ on:
   pull_request:
 
 jobs:
-  sass_spec:
-    name: "sass-spec | Dart ${{ matrix.dart_channel }} | ${{ matrix.async_label }}"
-    runs-on: ubuntu-latest
-
-    strategy:
-      fail-fast: false
-      matrix:
-        dart_channel: [stable, dev]
-        async_label: [synchronous]
-        async_args: ['']
-        include:
-          - dart_channel: stable
-            async_label: asynchronous
-            async_args: '--cmd-args --async'
-
-    steps:
-      - uses: actions/checkout@v2
-      - uses: dart-lang/setup-dart@v1
-        with: {sdk: "${{ matrix.dart_channel }}"}
-      - run: dart pub get
-      # Set up the environment to run the sass-spec runner which is written in Ruby
-      - name: Set up sass-spec
-        run: |
-          export sass_spec_ref=`tool/github-action/sass-spec-ref.sh`
-          git init sass-spec
-          git -C sass-spec fetch git://github.com/sass/sass-spec "$sass_spec_ref" --depth 1
-          git -C sass-spec checkout FETCH_HEAD
-        env:
-          PR_BRANCH: "${{ github.base_ref }}"
-          CURRENT_REF: "${{ github.ref }}"
-          PR_BODY: "${{ github.event.pull_request.body }}"
-      - uses: actions/setup-node@v2
-        with: {node-version: "${{ env.DEFAULT_NODE_VERSION }}"}
-      - run: npm install
-        working-directory: sass-spec
-      - name: Run specs
-        run: npm run sass-spec -- --dart .. $extra_args
-        working-directory: sass-spec
-        env: {extra_args: "${{ matrix.async_args }}"}
-
   dart_tests:
     name: "Dart tests | Dart ${{ matrix.dart_channel }} | ${{ matrix.os }}"
     runs-on: "${{ matrix.os }}"
@@ -87,7 +47,7 @@ jobs:
       fail-fast: false
 
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest]
         dart_channel: [stable]
         node_version: [14]
         include:
@@ -114,95 +74,6 @@ jobs:
       - name: Run tests
         run: dart pub run test -j 2 -t node -r expanded
 
-  static_analysis:
-    name: Static analysis
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v2
-      - uses: dart-lang/setup-dart@v1
-      - run: dart pub get
-      - name: Analyze Dart
-        run: dart analyze --fatal-warnings --fatal-infos .
-
-  dartdoc:
-    name: Dartdoc
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v2
-      - uses: dart-lang/setup-dart@v1
-      - run: dart pub get
-      - name: dartdoc sass
-        run: dartdoc --quiet --no-generate-docs
-          --errors ambiguous-doc-reference,broken-link,deprecated
-          --errors unknown-directive,unknown-macro,unresolved-doc-reference
-      - name: dartdoc sass_api
-        run: cd pkg/sass_api && dartdoc --quiet --no-generate-docs
-          --errors ambiguous-doc-reference,broken-link,deprecated
-          --errors unknown-directive,unknown-macro,unresolved-doc-reference
-
-  sanity_checks:
-    name: Sanity checks
-    runs-on: ubuntu-latest
-    needs: [sass_spec, dart_tests, node_tests, static_analysis, dartdoc]
-    if: "startsWith(github.ref, 'refs/tags/') && github.repository == 'sass/dart-sass'"
-
-    steps:
-      - uses: actions/checkout@v2
-      - uses: dart-lang/setup-dart@v1
-      - run: dart pub get
-      - name: Run checks
-        run: dart pub run grinder sanity-check-before-release
-
-  deploy_github_linux:
-    name: "Deploy Github: Linux"
-    runs-on: ubuntu-latest
-    needs: [sanity_checks]
-    if: "startsWith(github.ref, 'refs/tags/') && github.repository == 'sass/dart-sass'"
-
-    steps:
-      - uses: actions/checkout@v2
-      - uses: dart-lang/setup-dart@v1
-      - run: dart pub get
-      - name: Deploy
-        run: dart pub run grinder pkg-github-release pkg-github-linux
-        env:
-          GH_TOKEN: "${{ secrets.GH_TOKEN }}"
-          GH_USER: sassbot
-
-  deploy_github_macos:
-    name: "Deploy Github: Mac OS"
-    runs-on: macos-latest
-    needs: [deploy_github_linux]
-    if: "startsWith(github.ref, 'refs/tags/') && github.repository == 'sass/dart-sass'"
-
-    steps:
-      - uses: actions/checkout@v2
-      - uses: dart-lang/setup-dart@v1
-      - run: dart pub get
-      - name: Deploy
-        run: dart pub run grinder pkg-github-macos
-        env:
-          GH_TOKEN: "${{ secrets.GH_TOKEN }}"
-          GH_USER: sassbot
-
-  deploy_github_windows:
-    name: "Deploy Github: Windows"
-    runs-on: windows-latest
-    needs: [deploy_github_linux]
-    if: "startsWith(github.ref, 'refs/tags/') && github.repository == 'sass/dart-sass'"
-
-    steps:
-      - uses: actions/checkout@v2
-      - uses: dart-lang/setup-dart@v1
-      - run: dart pub get
-      - name: Deploy
-        run: dart pub run grinder pkg-github-windows
-        env:
-          GH_TOKEN: "${{ secrets.GH_TOKEN }}"
-          GH_USER: sassbot
-
   deploy_npm:
     name: Deploy npm
     runs-on: ubuntu-latest
@@ -219,96 +90,3 @@ jobs:
         run: dart pub run grinder pkg-npm-deploy
         env:
           NPM_TOKEN: "${{ secrets.NPM_TOKEN }}"
-
-  deploy_bazel:
-    name: Deploy Bazel
-    runs-on: ubuntu-latest
-    needs: [deploy_npm]
-    if: "startsWith(github.ref, 'refs/tags/') && github.repository == 'sass/dart-sass'"
-
-    steps:
-      - uses: actions/checkout@v2
-      - uses: dart-lang/setup-dart@v1
-      - run: dart pub get
-      - uses: actions/setup-node@v2
-        with: {node-version: "${{ env.DEFAULT_NODE_VERSION }}"}
-      - name: Deploy
-        run: dart pub run grinder update-bazel
-        env:
-          GH_TOKEN: "${{ secrets.GH_TOKEN }}"
-          GH_USER: sassbot
-
-  deploy_pub:
-    name: "Deploy Pub"
-    runs-on: ubuntu-latest
-    needs: [sanity_checks]
-    if: "startsWith(github.ref, 'refs/tags/') && github.repository == 'sass/dart-sass'"
-
-    steps:
-      - uses: actions/checkout@v2
-      - uses: dart-lang/setup-dart@v1
-      - run: dart pub get
-      - uses: actions/setup-node@v2
-        with: {node-version: "${{ env.DEFAULT_NODE_VERSION }}"}
-      - name: Deploy
-        run: dart pub run grinder pkg-pub-deploy
-        env: {PUB_CREDENTIALS: "${{ secrets.PUB_CREDENTIALS }}"}
-
-  deploy_sub_packages:
-    name: "Deploy Sub-Packages"
-    runs-on: ubuntu-latest
-    needs: [deploy_pub]
-    if: "startsWith(github.ref, 'refs/tags/') && github.repository == 'sass/dart-sass'"
-
-    steps:
-      - uses: actions/checkout@v2
-      - uses: dart-lang/setup-dart@v1
-      - run: dart pub get
-      - name: Deploy
-        run: dart pub run grinder deploy-sub-packages
-        env:
-          PUB_CREDENTIALS: "${{ secrets.PUB_CREDENTIALS }}"
-          GH_TOKEN: "${{ secrets.GH_TOKEN }}"
-          GH_USER: sassbot
-
-  deploy_homebrew:
-    name: "Deploy Homebrew"
-    runs-on: ubuntu-latest
-    needs: [sanity_checks]
-    if: "startsWith(github.ref, 'refs/tags/') && github.repository == 'sass/dart-sass'"
-
-    steps:
-      - uses: actions/checkout@v2
-      - uses: dart-lang/setup-dart@v1
-      - run: dart pub get
-      - name: Deploy
-        run: dart pub run grinder pkg-homebrew-update
-        env:
-          GH_TOKEN: "${{ secrets.GH_TOKEN }}"
-          GH_USER: sassbot
-
-  deploy_chocolatey:
-    name: "Deploy Chocolatey"
-    runs-on: windows-latest
-    needs: [sanity_checks]
-    if: "startsWith(github.ref, 'refs/tags/') && github.repository == 'sass/dart-sass'"
-
-    steps:
-      - uses: actions/checkout@v2
-      - uses: dart-lang/setup-dart@v1
-      - run: dart pub get
-      - name: Deploy
-        run: dart pub run grinder pkg-chocolatey-deploy
-        env: {CHOCOLATEY_TOKEN: "${{ secrets.CHOCOLATEY_TOKEN }}"}
-
-  deploy_website:
-    name: "Deploy sass-lang.com"
-    runs-on: ubuntu-latest
-    needs: [sanity_checks]
-    if: "startsWith(github.ref, 'refs/tags/') && github.repository == 'sass/dart-sass'"
-
-    steps:
-      - uses: actions/checkout@v2
-      - name: Deploy
-        run: tool/github-action/deploy/heroku.sh
-        env: {HEROKU_TOKEN: "${{ secrets.HEROKU_TOKEN }}"}
