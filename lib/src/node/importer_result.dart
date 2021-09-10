@@ -9,6 +9,8 @@ import 'package:js/js.dart';
 class NodeImporterResult {
   external String? get file;
   external String? get contents;
+  external bool? get isIndentedSyntax;
 
-  external factory NodeImporterResult({String? file, String? contents});
+  external factory NodeImporterResult(
+      {String? file, String? contents, bool? isIndentedSyntax});
 }
