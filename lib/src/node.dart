@@ -255,9 +255,8 @@ NodeImporter _parseImporter(RenderOptions options, DateTime start) {
 
   var contextOptions =
       importers.isNotEmpty ? _contextOptions(options, start) : Object();
-
-  var includePaths = List<String>.from(options.includePaths ?? []);
-  return NodeImporter(contextOptions, includePaths, importers);
+      
+  return NodeImporter(contextOptions, importers);
 }
 
 /// Creates the [RenderContextOptions] for the `this` context in which custom
