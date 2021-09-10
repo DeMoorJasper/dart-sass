@@ -14,31 +14,7 @@ on:
   pull_request:
 
 jobs:
-  dart_tests:
-    name: "Dart tests | Dart ${{ matrix.dart_channel }} | ${{ matrix.os }}"
-    runs-on: "${{ matrix.os }}"
-
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest]
-        dart_channel: [stable]
-        include: [{os: ubuntu-latest, dart_channel: dev}]
-
-    steps:
-      - uses: actions/checkout@v2
-      - uses: dart-lang/setup-dart@v1
-        with: {sdk: "${{ matrix.dart_channel }}"}
-      - run: dart pub get
-      - run: dart pub run grinder pkg-standalone-dev
-      - name: Run tests
-        run: dart pub run test -p vm -x node -r expanded
-
   # Unit tests that use Node.js, defined in test/.
-  #
-  # The versions should be kept up-to-date with the latest LTS Node releases.
-  # They next need to be rotated April 2021. See
-  # https://github.com/nodejs/Release.
   node_tests:
     name: "Node tests | Dart ${{ matrix.dart_channel }} | Node ${{ matrix.node_version }} | ${{ matrix.os }}"
     runs-on: "${{ matrix.os }}"
