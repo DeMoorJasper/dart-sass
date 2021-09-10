@@ -67,27 +67,15 @@ void main() {
 /// [render]: https://github.com/sass/node-sass#options
 void _render(
     RenderOptions options, void callback(Object? error, RenderResult? result)) {
-  var fiber = options.fiber;
-  if (fiber != null) {
-    fiber.call(allowInterop(() {
-      try {
-        callback(null, _renderSync(options));
-      } catch (error) {
-        callback(error, null);
-      }
-      return null;
-    })).run();
-  } else {
-    _renderAsync(options).then((result) {
-      callback(null, result);
-    }, onError: (Object error, StackTrace stackTrace) {
-      if (error is SassException) {
-        callback(_wrapException(error), null);
-      } else {
-        callback(_newRenderError(error.toString(), status: 3), null);
-      }
-    });
-  }
+  _renderAsync(options).then((result) {
+    callback(null, result);
+  }, onError: (Object error, StackTrace stackTrace) {
+    if (error is SassException) {
+      callback(_wrapException(error), null);
+    } else {
+      callback(_newRenderError(error.toString(), status: 3), null);
+    }
+  });
 }
 
 /// Converts Sass to CSS asynchronously.
@@ -230,27 +218,7 @@ List<AsyncCallable> _parseFunctions(RenderOptions options, DateTime start,
     var context = RenderContext(options: _contextOptions(options, start));
     context.options.context = context;
 
-    var fiber = options.fiber;
-    if (fiber != null) {
-      result.add(BuiltInCallable.parsed(tuple.item1, tuple.item2, (arguments) {
-        var currentFiber = fiber.current;
-        var jsArguments = [
-          ...arguments.map(wrapValue),
-          allowInterop(([Object? result]) {
-            // Schedule a microtask so we don't try to resume the running fiber
-            // if [importer] calls `done()` synchronously.
-            scheduleMicrotask(() => currentFiber.run(result));
-          })
-        ];
-        var result = (callback as JSFunction).apply(context, jsArguments);
-        return unwrapValue(isUndefined(result)
-            // Run `fiber.yield()` in runZoned() so that Dart resets the current
-            // zone once it's done. Otherwise, interweaving fibers can leave
-            // `Zone.current` in an inconsistent state.
-            ? runZoned(() => fiber.yield())
-            : result);
-      }));
-    } else if (!asynch) {
+    if (!asynch) {
       result.add(BuiltInCallable.parsed(
           tuple.item1,
           tuple.item2,
@@ -287,28 +255,6 @@ NodeImporter _parseImporter(RenderOptions options, DateTime start) {
 
   var contextOptions =
       importers.isNotEmpty ? _contextOptions(options, start) : Object();
-
-  var fiber = options.fiber;
-  if (fiber != null) {
-    importers = importers.map((importer) {
-      return allowInteropCaptureThis(
-          (Object thisArg, String url, String previous, [Object? _]) {
-        var currentFiber = fiber.current;
-        var result = call3(importer, thisArg, url, previous,
-            allowInterop((Object result) {
-          // Schedule a microtask so we don't try to resume the running fiber if
-          // [importer] calls `done()` synchronously.
-          scheduleMicrotask(() => currentFiber.run(result));
-        }));
-
-        // Run `fiber.yield()` in runZoned() so that Dart resets the current
-        // zone once it's done. Otherwise, interweaving fibers can leave
-        // `Zone.current` in an inconsistent state.
-        if (isUndefined(result)) return runZoned(() => fiber.yield());
-        return result;
-      }) as JSFunction;
-    }).toList();
-  }
 
   var includePaths = List<String>.from(options.includePaths ?? []);
   return NodeImporter(contextOptions, includePaths, importers);
