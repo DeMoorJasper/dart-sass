@@ -5,6 +5,9 @@
     "name to enable GitHub's dependency graph tracking."
   ],
   "name": "sass",
+  "scripts": {
+    "build": "dart run grinder pkg-npm-release"
+  },
   "devDependencies": {
     "intercept-stdout": "^0.1.2",
     "node-sass": "^4.11.0"

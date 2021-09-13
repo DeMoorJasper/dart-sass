@@ -1606,16 +1606,28 @@ class _EvaluateVisitor
   /// Returns the [Stylesheet], or `null` if the import failed.
   Future<_LoadedStylesheet?> _importLikeNode(
       String originalUrl, bool forImport) async {
-    var result = await _nodeImporter!
-        .loadAsync(originalUrl, _stylesheet.span.sourceUrl, forImport);
-    if (result == null) return null;
+    var result = _nodeImporter!
+        .loadRelative(originalUrl, _stylesheet.span.sourceUrl, forImport);
+
+    bool isDependency;
+    if (result != null) {
+      isDependency = _inDependency;
+    } else {
+      result = await _nodeImporter!
+          .loadAsync(originalUrl, _stylesheet.span.sourceUrl, forImport);
+      if (result == null) return null;
+      isDependency = true;
+    }
+
+    var contents = result.item1;
+    var url = result.item2;
 
     return _LoadedStylesheet(
-        Stylesheet.parse(result.contents,
-            result.isIndentedSyntax ? Syntax.sass : Syntax.scss,
-            url: result.uri,
-            logger: _quietDeps && true ? Logger.quiet : _logger),
-        isDependency: true);
+        Stylesheet.parse(contents,
+            url.startsWith('file') ? Syntax.forPath(url) : Syntax.scss,
+            url: url,
+            logger: _quietDeps && isDependency ? Logger.quiet : _logger),
+        isDependency: isDependency);
   }
 
   /// Adds a CSS import for [import].
