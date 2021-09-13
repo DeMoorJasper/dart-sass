@@ -7,10 +7,10 @@ import 'package:js/js.dart';
 @JS()
 @anonymous
 class NodeImporterResult {
-  external String? get file;
-  external String? get contents;
-  external bool? get isIndentedSyntax;
+  external String get file;
+  external String get contents;
+  external bool get isIndentedSyntax;
 
   external factory NodeImporterResult(
-      {String? file, String? contents, bool? isIndentedSyntax});
+      {String file, String contents, bool isIndentedSyntax});
 }

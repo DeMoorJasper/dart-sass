@@ -12,9 +12,7 @@ import '../../io.dart';
 import '../../node/function.dart';
 import '../../node/importer_result.dart';
 import '../../node/utils.dart';
-import '../../util/nullable.dart';
 import '../../node/render_context.dart';
-import '../utils.dart';
 
 /// An importer that encapsulates Node Sass's import logic.
 ///
@@ -67,33 +65,12 @@ class NodeImporter {
     yield* sassPath.split(isWindows ? ';' : ':');
   }
 
-  /// Loads the stylesheet at [url] relative to [previous] if possible.
-  ///
-  /// This can also load [url] directly if it's an absolute `file:` URL, even if
-  /// `previous` isn't defined or isn't a `file:` URL.
-  ///
-  /// Returns the stylesheet at that path and the URL used to load it, or `null`
-  /// if loading failed.
-  Tuple2<String, String>? loadRelative(
-      String url, Uri? previous, bool forImport) {
-    if (p.url.isAbsolute(url)) {
-      if (!url.startsWith('/') && !url.startsWith('file:')) return null;
-      return _tryPath(p.fromUri(url), forImport);
-    }
-
-    if (previous?.scheme != 'file') return null;
-
-    // 1: Filesystem imports relative to the base file.
-    return _tryPath(
-        p.join(p.dirname(p.fromUri(previous)), p.fromUri(url)), forImport);
-  }
-
   /// Loads the stylesheet at [url] from an importer or load path.
   ///
   /// The [previous] URL is the URL of the stylesheet in which the import
   /// appeared. Returns the contents of the stylesheet and the URL to use as
   /// [previous] for imports within the loaded stylesheet.
-  Tuple2<String, String>? load(String url, Uri? previous, bool forImport) {
+  NodeImporterResult? load(String url, Uri? previous, bool forImport) {
     // The previous URL is always an absolute file path for filesystem imports.
     var previousString = _previousToString(previous);
     for (var importer in _importers) {
@@ -103,8 +80,6 @@ class NodeImporter {
         return _handleImportResult(url, previous, value, forImport);
       }
     }
-
-    return _resolveLoadPathFromUrl(Uri.parse(url), forImport);
   }
 
   /// Asynchronously loads the stylesheet at [url] from an importer or load
@@ -113,7 +88,7 @@ class NodeImporter {
   /// The [previous] URL is the URL of the stylesheet in which the import
   /// appeared. Returns the contents of the stylesheet and the URL to use as
   /// [previous] for imports within the loaded stylesheet.
-  Future<Tuple2<String, String>?> loadAsync(
+  Future<NodeImporterResult?> loadAsync(
       String url, Uri? previous, bool forImport) async {
     // The previous URL is always an absolute file path for filesystem imports.
     var previousString = _previousToString(previous);
@@ -124,8 +99,6 @@ class NodeImporter {
         return _handleImportResult(url, previous, value, forImport);
       }
     }
-
-    return _resolveLoadPathFromUrl(Uri.parse(url), forImport);
   }
 
   /// Converts [previous] to a string to pass to the importer function.
@@ -135,65 +108,14 @@ class NodeImporter {
     return previous.toString();
   }
 
-  /// Tries to load a stylesheet at the given [url] from a load path (including
-  /// the working directory), if that URL refers to the filesystem.
-  ///
-  /// Returns the stylesheet at that path and the URL used to load it, or `null`
-  /// if loading failed.
-  Tuple2<String, String>? _resolveLoadPathFromUrl(Uri url, bool forImport) =>
-      url.scheme == '' || url.scheme == 'file'
-          ? _resolveLoadPath(p.fromUri(url), forImport)
-          : null;
-
-  /// Tries to load a stylesheet at the given [path] from a load path (including
-  /// the working directory).
-  ///
-  /// Returns the stylesheet at that path and the URL used to load it, or `null`
-  /// if loading failed.
-  Tuple2<String, String>? _resolveLoadPath(String path, bool forImport) {
-    // 2: Filesystem imports relative to the working directory.
-    var cwdResult = _tryPath(p.absolute(path), forImport);
-    if (cwdResult != null) return cwdResult;
-
-    // 3: Filesystem imports relative to [_includePaths].
-    for (var includePath in _includePaths) {
-      var result = _tryPath(p.absolute(p.join(includePath, path)), forImport);
-      if (result != null) return result;
-    }
-
-    return null;
-  }
-
-  /// Tries to load a stylesheet at the given [path].
-  ///
-  /// Returns the stylesheet at that path and the URL used to load it, or `null`
-  /// if loading failed.
-  Tuple2<String, String>? _tryPath(String path, bool forImport) => (forImport
-          ? inImportRule(() => resolveImportPath(path))
-          : resolveImportPath(path))
-      .andThen((resolved) =>
-          Tuple2(readFile(resolved), p.toUri(resolved).toString()));
-
   /// Converts an importer's return [value] to a tuple that can be returned by
   /// [load].
-  Tuple2<String, String>? _handleImportResult(
+  NodeImporterResult? _handleImportResult(
       String url, Uri? previous, Object value, bool forImport) {
     if (isJSError(value)) throw value;
     if (value is! NodeImporterResult) return null;
 
-    var file = value.file;
-    var contents = value.contents;
-    if (file == null) {
-      return Tuple2(contents ?? '', url);
-    } else if (contents != null) {
-      return Tuple2(contents, p.toUri(file).toString());
-    } else {
-      var resolved =
-          loadRelative(p.toUri(file).toString(), previous, forImport) ??
-              _resolveLoadPath(file, forImport);
-      if (resolved != null) return resolved;
-      throw "Can't find stylesheet to import.";
-    }
+    return value;
   }
 
   /// Calls an importer that may or may not be asynchronous.
