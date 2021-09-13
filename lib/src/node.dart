@@ -17,7 +17,6 @@ import 'callable.dart';
 import 'compile.dart';
 import 'compile_result.dart';
 import 'exception.dart';
-import 'io.dart';
 import 'importer/node.dart';
 import 'node/exports.dart';
 import 'node/function.dart';
@@ -213,7 +212,7 @@ RenderContextOptions _contextOptions(RenderOptions options, DateTime start) {
   return RenderContextOptions(
       file: options.file,
       data: options.data,
-      includePaths: ([p.current, ...includePaths]).join(isWindows ? ';' : ':'),
+      includePaths: ([p.current, ...includePaths]).join(':'),
       precision: SassNumber.precision,
       style: 1,
       indentType: options.indentType == 'tab' ? 1 : 0,
