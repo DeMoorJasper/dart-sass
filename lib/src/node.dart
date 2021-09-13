@@ -38,7 +38,6 @@ import 'visitor/serialize.dart';
 /// This sets up exports that can be called from JS.
 void main() {
   exports.render = allowInterop(_render);
-  exports.renderSync = allowInterop(_renderSync);
   exports.info =
       "dart-sass\t${const String.fromEnvironment('version')}\t(Sass Compiler)\t"
       "[Dart]\n"
@@ -117,59 +116,6 @@ Future<RenderResult> _renderAsync(RenderOptions options) async {
   }
 
   return _newRenderResult(options, result, start);
-}
-
-/// Converts Sass to CSS.
-///
-/// This attempts to match the [node-sass `renderSync()` API][render] as closely
-/// as possible.
-///
-/// [render]: https://github.com/sass/node-sass#options
-RenderResult _renderSync(RenderOptions options) {
-  try {
-    var start = DateTime.now();
-    CompileResult result;
-
-    var data = options.data;
-    var file = options.file.andThen(p.absolute);
-    if (data != null) {
-      result = compileString(data,
-          nodeImporter: _parseImporter(options, start),
-          functions: _parseFunctions(options, start).cast(),
-          syntax: isTruthy(options.indentedSyntax) ? Syntax.sass : null,
-          style: _parseOutputStyle(options.outputStyle),
-          useSpaces: options.indentType != 'tab',
-          indentWidth: _parseIndentWidth(options.indentWidth),
-          lineFeed: _parseLineFeed(options.linefeed),
-          url: file == null ? 'stdin' : p.toUri(file).toString(),
-          quietDeps: options.quietDeps ?? false,
-          verbose: options.verbose ?? false,
-          charset: options.charset ?? true,
-          sourceMap: _enableSourceMaps(options));
-    } else if (file != null) {
-      result = compile(file,
-          nodeImporter: _parseImporter(options, start),
-          functions: _parseFunctions(options, start).cast(),
-          syntax: isTruthy(options.indentedSyntax) ? Syntax.sass : null,
-          style: _parseOutputStyle(options.outputStyle),
-          useSpaces: options.indentType != 'tab',
-          indentWidth: _parseIndentWidth(options.indentWidth),
-          lineFeed: _parseLineFeed(options.linefeed),
-          quietDeps: options.quietDeps ?? false,
-          verbose: options.verbose ?? false,
-          charset: options.charset ?? true,
-          sourceMap: _enableSourceMaps(options));
-    } else {
-      throw ArgumentError("Either options.data or options.file must be set.");
-    }
-
-    return _newRenderResult(options, result, start);
-  } on SassException catch (error) {
-    jsThrow(_wrapException(error));
-  } catch (error) {
-    jsThrow(_newRenderError(error.toString(), status: 3));
-  }
-  throw "unreachable";
 }
 
 /// Converts an exception to a [JsError].
